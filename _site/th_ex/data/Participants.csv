@@ -1,4 +1,4 @@
-participantId,householdSize,haveKids,age,educationLevel,interestGroup,joviality
+﻿participantId,householdSize,haveKids,age,educationLevel,interestGroup,joviality
 0,3,TRUE,36,HighSchoolOrCollege,H,0.001626703
 1,3,TRUE,25,HighSchoolOrCollege,B,0.3280865
 2,3,TRUE,35,HighSchoolOrCollege,A,0.39346959

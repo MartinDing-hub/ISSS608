@@ -1,13 +1,11 @@
 ---
-title: "Untitled"
+title: "Reveal the demographic of the city of Engagement, Ohio USA"
 description: |
-  A new article created using the Distill format.
+  **Take-home Exercise 1**
 author:
-  - name: Nora Jones 
-    url: https://example.com/norajones
-    affiliation: Spacely Sprockets
-    affiliation_url: https://example.com/spacelysprokets
-date: "`r Sys.Date()`"
+  - name: Ding Yanmu
+    url: https://github.com/MartinDing-hub/ISSS608
+date: "April 23, 2022"
 output: distill::distill_article
 ---
 
@@ -15,11 +13,372 @@ output: distill::distill_article
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-Distill is a publication format for scientific and technical writing, native to the web. 
+# 1. Introduction
+The main task of this take-home exercise is to reveal the demographic of Ohio in the USA. Through this exercise, I will learn how to use the **tidyverse** family of packages in R, and how to use the ggplot2 package to draw charts.
 
-Learn more about using Distill for R Markdown at <https://rstudio.github.io/distill>.
+# 2. Data Discription
+The data file used for this exercise is ***Participant.csv***.
 
+In this csv file, there are 7 columns of data. They are **participantId**, **householdSize**, **haveKids**, **age**, **educationLevel**, **interestGroup** and **joviality**. The following are the data type and description of each column of data:
 
+* **participantId**: Participant's ID, *integer*. (Counting from 0)
+* **householdSize**: Participant's family size, *integer*.
+* **haveKids**: Whether the participant has children, *boolean*.
+* **age**: Participant's age, *integer*.
+* **educationLevel**: Participant's education level, *string*.
+* **interestGroup**: The interest groups the participants are divided into, *string* (Each group is represented by a capital letter)
+* **joviality**: Participants' happiness index, *float*. (Decimal between 0 and 1)
 
+# 3. Data Preparation
+### Installing and launching R packages
 
+For this exercise, only **tidyverse** package is required, because both **readr** sub-package and **ggplot2** sub-package are under this package. The R code in the following code chunk is used to install **tidyverse** package and load it into RStudio environment.
 
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+packages <- c('tidyverse', 'patchwork', 'ggthemes')
+
+for(p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+
+```
+
+### Importing the dataset
+
+Data import was completed by using read_csv() which is a function in **readr** package. This function is useful for reading delimited files into a tibble. Here, `str(data)` is used to show the structure of the dataset.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+data <- read_csv("data/Participants.csv")
+# Showing the structure of the dataset
+str(data)
+```
+
+### Analyzing data and rebuilding data frame
+
+1. **Analysis of Participants' age**
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+# Minimum participant's age
+youngest <- min(data["age"])
+y <- paste0("The youngest participant is ", youngest, " years old.")
+y
+
+# Maximum participant's age
+oldest <- max(data["age"])
+o <- paste0("The oldest participant is ", oldest, " years old.")
+o
+```
+
+2. **Analysis of Participants' family size**
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+# Smallest participant's family size
+smallest <- min(data["householdSize"])
+s <- paste0("The smallest participant's family size is ", smallest, " .")
+s
+
+# Largest participant's family size
+largest <- max(data["householdSize"])
+l <- paste0("The largest participant's family size is ", largest, " .")
+l
+```
+
+3. **Analysis of Participants' education level**
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+# Participants' education levels
+education_levels <- unique(data["educationLevel"])
+education_levels
+```
+
+4. **Analysis of Participants' interest group**
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+# Participants' interest groups
+interest_groups <- unique(data["interestGroup"])
+interest_groups
+```
+
+5. **Rebuild a new data frame according to the results of above analysis.**
+
+The purpose of rebuilding the new data frame is to make the subsequent deeper analysis much easier.
+
+The new data frame is built based on different age group. Since the youngest participant is 18 years old and the oldest participant is 60 years old, I divided all the participants into 9 groups, namely 18-20, 21-25, 26-30, 31-35, 36-40, 41-45, 46-50, 51-55 and 56-60.
+
+Considering the generality of the analysis results, all the numerical results in the new table will be filled in with the average value. The new data frame is shown as followed.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+## Allocate the age group
+# The number of participants whose age is between 18 ~ 20
+c18_20 <- sum(data$age >= 18 & data$age <= 20)
+# The number of participants whose age is between 21 ~ 25
+c21_25 <- sum(data$age >= 21 & data$age <= 25)
+# The number of participants whose age is between 26 ~ 30
+c26_30 <- sum(data$age >= 26 & data$age <= 30)
+# The number of participants whose age is between 31 ~ 35
+c31_35 <- sum(data$age >= 31 & data$age <= 35)
+# The number of participants whose age is between 36 ~ 40
+c36_40 <- sum(data$age >= 36 & data$age <= 40)
+# The number of participants whose age is between 41 ~ 45
+c41_45 <- sum(data$age >= 41 & data$age <= 45)
+# The number of participants whose age is between 46 ~ 50
+c46_50 <- sum(data$age >= 46 & data$age <= 50)
+# The number of participants whose age is between 51 ~ 55
+c51_55 <- sum(data$age >= 51 & data$age <= 55)
+# The number of participants whose age is between 56 ~ 60
+c56_60 <- sum(data$age >= 56 & data$age <= 60)
+
+## Calculate the average happiness index of each age group
+# The average happiness index of participants whose age is between 18 ~ 20
+h18_20 <- sum(data[data$age >= 18 & data$age <= 20,]['joviality'])/c18_20
+# The average happiness index of participants whose age is between 21 ~ 25
+h21_25 <- sum(data[data$age >= 21 & data$age <= 25,]['joviality'])/c21_25
+# The average happiness index of participants whose age is between 26 ~ 30
+h26_30 <- sum(data[data$age >= 26 & data$age <= 30,]['joviality'])/c26_30
+# The average happiness index of participants whose age is between 31 ~ 35
+h31_35 <- sum(data[data$age >= 31 & data$age <= 35,]['joviality'])/c31_35
+# The average happiness index of participants whose age is between 36 ~ 40
+h36_40 <- sum(data[data$age >= 36 & data$age <= 40,]['joviality'])/c36_40
+# The average happiness index of participants whose age is between 41 ~ 45
+h41_45 <- sum(data[data$age >= 41 & data$age <= 45,]['joviality'])/c41_45
+# The average happiness index of participants whose age is between 46 ~ 50
+h46_50 <- sum(data[data$age >= 46 & data$age <= 50,]['joviality'])/c46_50
+# The average happiness index of participants whose age is between 51 ~ 55
+h51_55 <- sum(data[data$age >= 51 & data$age <= 55,]['joviality'])/c51_55
+# The average happiness index of participants whose age is between 56 ~ 60
+h56_60 <- sum(data[data$age >= 56 & data$age <= 60,]['joviality'])/c56_60
+
+## Calculate the total number of participants who have children
+# The number of participants whose age is between 18 ~ 20 and has child
+child18_20 <- sum(data$age >= 18 & data$age <= 20 & data$haveKids == 'TRUE')
+# The number of participants whose age is between 21 ~ 25 and has child
+child21_25 <- sum(data$age >= 21 & data$age <= 25 & data$haveKids == 'TRUE')
+# The number of participants whose age is between 26 ~ 30 and has child
+child26_30 <- sum(data$age >= 26 & data$age <= 30 & data$haveKids == 'TRUE')
+# The number of participants whose age is between 31 ~ 35 and has child
+child31_35 <- sum(data$age >= 31 & data$age <= 35 & data$haveKids == 'TRUE')
+# The number of participants whose age is between 36 ~ 40 and has child
+child36_40 <- sum(data$age >= 36 & data$age <= 40 & data$haveKids == 'TRUE')
+# The number of participants whose age is between 41 ~ 45 and has child
+child41_45 <- sum(data$age >= 41 & data$age <= 45 & data$haveKids == 'TRUE')
+# The number of participants whose age is between 46 ~ 50 and has child
+child46_50 <- sum(data$age >= 46 & data$age <= 50 & data$haveKids == 'TRUE')
+# The number of participants whose age is between 51 ~ 55 and has child
+child51_55 <- sum(data$age >= 51 & data$age <= 55 & data$haveKids == 'TRUE')
+# The number of participants whose age is between 56 ~ 60 and has child
+child56_60 <- sum(data$age >= 56 & data$age <= 60 & data$haveKids == 'TRUE')
+
+## Calculate the average happiness index with children of each age group 
+# The average happiness index of participants who have kids and whose age is between 18 ~ 20
+hk18_20 <- sum(data[data$age >= 18 & data$age <= 20 & data$haveKids == 'TRUE',]['joviality'])/child18_20
+# The average happiness index of participants who have kids whose age is between 21 ~ 25
+hk21_25 <- sum(data[data$age >= 21 & data$age <= 25 & data$haveKids == 'TRUE',]['joviality'])/child21_25
+# The average happiness index of participants who have kids and whose age is between 26 ~ 30
+hk26_30 <- sum(data[data$age >= 26 & data$age <= 30 & data$haveKids == 'TRUE',]['joviality'])/child26_30
+# The average happiness index of participants who have kids and whose age is between 31 ~ 35
+hk31_35 <- sum(data[data$age >= 31 & data$age <= 35 & data$haveKids == 'TRUE',]['joviality'])/child31_35
+# The average happiness index of participants who have kids and whose age is between 36 ~ 40
+hk36_40 <- sum(data[data$age >= 36 & data$age <= 40 & data$haveKids == 'TRUE',]['joviality'])/child36_40
+# The average happiness index of participants who have kids and whose age is between 41 ~ 45
+hk41_45 <- sum(data[data$age >= 41 & data$age <= 45 & data$haveKids == 'TRUE',]['joviality'])/child41_45
+# The average happiness index of participants who have kids and whose age is between 46 ~ 50
+hk46_50 <- sum(data[data$age >= 46 & data$age <= 50 & data$haveKids == 'TRUE',]['joviality'])/child46_50
+# The average happiness index of participants who have kids and whose age is between 51 ~ 55
+hk51_55 <- sum(data[data$age >= 51 & data$age <= 55 & data$haveKids == 'TRUE',]['joviality'])/child51_55
+# The average happiness index of participants who have kids and whose age is between 56 ~ 60
+hk56_60 <- sum(data[data$age >= 56 & data$age <= 60 & data$haveKids == 'TRUE',]['joviality'])/child56_60
+
+## Calculate the average happiness index with "HighSchoolOrCollege" education level of each age group 
+# The average happiness index of participants who have high school or college education level and whose age is between 18 ~ 20
+e1_18_20 <- sum(data[data$age >= 18 & data$age <= 20 & data$educationLevel == 'HighSchoolOrCollege',]['joviality'])/count(data[data$age >= 18 & data$age <= 20 & data$educationLevel == 'HighSchoolOrCollege',])
+# The average happiness index of participants who have high school or college education level and whose age is between 21 ~ 25
+e1_21_25 <- sum(data[data$age >= 21 & data$age <= 25 & data$educationLevel == 'HighSchoolOrCollege',]['joviality'])/count(data[data$age >= 21 & data$age <= 25 & data$educationLevel == 'HighSchoolOrCollege',])
+# The average happiness index of participants who have high school or college education level and and whose age is between 26 ~ 30
+e1_26_30 <- sum(data[data$age >= 26 & data$age <= 30 & data$educationLevel == 'HighSchoolOrCollege',]['joviality'])/count(data[data$age >= 26 & data$age <= 30 & data$educationLevel == 'HighSchoolOrCollege',])
+# The average happiness index of participants who have high school or college education level and and whose age is between 31 ~ 35
+e1_31_35 <- sum(data[data$age >= 31 & data$age <= 35 & data$educationLevel == 'HighSchoolOrCollege',]['joviality'])/count(data[data$age >= 31 & data$age <= 35 & data$educationLevel == 'HighSchoolOrCollege',])
+# The average happiness index of participants who have high school or college education level and and whose age is between 36 ~ 40
+e1_36_40 <- sum(data[data$age >= 36 & data$age <= 40 & data$educationLevel == 'HighSchoolOrCollege',]['joviality'])/count(data[data$age >= 36 & data$age <= 40 & data$educationLevel == 'HighSchoolOrCollege',])
+# The average happiness index of participants who have high school or college education level and and whose age is between 41 ~ 45
+e1_41_45 <- sum(data[data$age >= 41 & data$age <= 45 & data$educationLevel == 'HighSchoolOrCollege',]['joviality'])/count(data[data$age >= 41 & data$age <= 45 & data$educationLevel == 'HighSchoolOrCollege',])
+# The average happiness index of participants who have high school or college education level and and whose age is between 46 ~ 50
+e1_46_50 <- sum(data[data$age >= 46 & data$age <= 50 & data$educationLevel == 'HighSchoolOrCollege',]['joviality'])/count(data[data$age >= 46 & data$age <= 50 & data$educationLevel == 'HighSchoolOrCollege',])
+# The average happiness index of participants who have high school or college education level and and whose age is between 51 ~ 55
+e1_51_55 <- sum(data[data$age >= 51 & data$age <= 55 & data$educationLevel == 'HighSchoolOrCollege',]['joviality'])/count(data[data$age >= 51 & data$age <= 55 & data$educationLevel == 'HighSchoolOrCollege',])
+# The average happiness index of participants who have high school or college education level and and whose age is between 56 ~ 60
+e1_56_60 <- sum(data[data$age >= 56 & data$age <= 60 & data$educationLevel == 'HighSchoolOrCollege',]['joviality'])/count(data[data$age >= 56 & data$age <= 60 & data$educationLevel == 'HighSchoolOrCollege',])
+
+## Calculate the average happiness index with "Bachelors" education level of each age group 
+# The average happiness index of participants who have bachelors degree and whose age is between 18 ~ 20
+e2_18_20 <- sum(data[data$age >= 18 & data$age <= 20 & data$educationLevel == 'Bachelors',]['joviality'])/count(data[data$age >= 18 & data$age <= 20 & data$educationLevel == 'Bachelors',])
+# The average happiness index of participants who have bachelors degree and whose age is between 21 ~ 25
+e2_21_25 <- sum(data[data$age >= 21 & data$age <= 25 & data$educationLevel == 'Bachelors',]['joviality'])/count(data[data$age >= 21 & data$age <= 25 & data$educationLevel == 'Bachelors',])
+# The average happiness index of participants who have bachelors degree and and whose age is between 26 ~ 30
+e2_26_30 <- sum(data[data$age >= 26 & data$age <= 30 & data$educationLevel == 'Bachelors',]['joviality'])/count(data[data$age >= 26 & data$age <= 30 & data$educationLevel == 'Bachelors',])
+# The average happiness index of participants who have bachelors degree and and whose age is between 31 ~ 35
+e2_31_35 <- sum(data[data$age >= 31 & data$age <= 35 & data$educationLevel == 'Bachelors',]['joviality'])/count(data[data$age >= 31 & data$age <= 35 & data$educationLevel == 'Bachelors',])
+# The average happiness index of participants who have bachelors degree and and whose age is between 36 ~ 40
+e2_36_40 <- sum(data[data$age >= 36 & data$age <= 40 & data$educationLevel == 'Bachelors',]['joviality'])/count(data[data$age >= 36 & data$age <= 40 & data$educationLevel == 'Bachelors',])
+# The average happiness index of participants who have bachelors degree and and whose age is between 41 ~ 45
+e2_41_45 <- sum(data[data$age >= 41 & data$age <= 45 & data$educationLevel == 'Bachelors',]['joviality'])/count(data[data$age >= 41 & data$age <= 45 & data$educationLevel == 'Bachelors',])
+# The average happiness index of participants who have bachelors degree and and whose age is between 46 ~ 50
+e2_46_50 <- sum(data[data$age >= 46 & data$age <= 50 & data$educationLevel == 'Bachelors',]['joviality'])/count(data[data$age >= 46 & data$age <= 50 & data$educationLevel == 'Bachelors',])
+# The average happiness index of participants who have bachelors degree and and whose age is between 51 ~ 55
+e2_51_55 <- sum(data[data$age >= 51 & data$age <= 55 & data$educationLevel == 'Bachelors',]['joviality'])/count(data[data$age >= 51 & data$age <= 55 & data$educationLevel == 'Bachelors',])
+# The average happiness index of participants who have bachelors degree and and whose age is between 56 ~ 60
+e2_56_60 <- sum(data[data$age >= 56 & data$age <= 60 & data$educationLevel == 'Bachelors',]['joviality'])/count(data[data$age >= 56 & data$age <= 60 & data$educationLevel == 'Bachelors',])
+
+## Calculate the average happiness index with "Graduate" education level of each age group 
+# The average happiness index of participants who have graduate degree and whose age is between 18 ~ 20
+e3_18_20 <- sum(data[data$age >= 18 & data$age <= 20 & data$educationLevel == 'Graduate',]['joviality'])/count(data[data$age >= 18 & data$age <= 20 & data$educationLevel == 'Graduate',])
+# The average happiness index of participants who have graduate degree and whose age is between 21 ~ 25
+e3_21_25 <- sum(data[data$age >= 21 & data$age <= 25 & data$educationLevel == 'Graduate',]['joviality'])/count(data[data$age >= 21 & data$age <= 25 & data$educationLevel == 'Graduate',])
+# The average happiness index of participants who have graduate degree and and whose age is between 26 ~ 30
+e3_26_30 <- sum(data[data$age >= 26 & data$age <= 30 & data$educationLevel == 'Graduate',]['joviality'])/count(data[data$age >= 26 & data$age <= 30 & data$educationLevel == 'Graduate',])
+# The average happiness index of participants who have graduate degree and and whose age is between 31 ~ 35
+e3_31_35 <- sum(data[data$age >= 31 & data$age <= 35 & data$educationLevel == 'Graduate',]['joviality'])/count(data[data$age >= 31 & data$age <= 35 & data$educationLevel == 'Graduate',])
+# The average happiness index of participants who have graduate degree and and whose age is between 36 ~ 40
+e3_36_40 <- sum(data[data$age >= 36 & data$age <= 40 & data$educationLevel == 'Graduate',]['joviality'])/count(data[data$age >= 36 & data$age <= 40 & data$educationLevel == 'Graduate',])
+# The average happiness index of participants who have graduate degree and and whose age is between 41 ~ 45
+e3_41_45 <- sum(data[data$age >= 41 & data$age <= 45 & data$educationLevel == 'Graduate',]['joviality'])/count(data[data$age >= 41 & data$age <= 45 & data$educationLevel == 'Graduate',])
+# The average happiness index of participants who have graduate degree and and whose age is between 46 ~ 50
+e3_46_50 <- sum(data[data$age >= 46 & data$age <= 50 & data$educationLevel == 'Graduate',]['joviality'])/count(data[data$age >= 46 & data$age <= 50 & data$educationLevel == 'Graduate',])
+# The average happiness index of participants who have graduate degree and and whose age is between 51 ~ 55
+e3_51_55 <- sum(data[data$age >= 51 & data$age <= 55 & data$educationLevel == 'Graduate',]['joviality'])/count(data[data$age >= 51 & data$age <= 55 & data$educationLevel == 'Graduate',])
+# The average happiness index of participants who have graduate degree and and whose age is between 56 ~ 60
+e3_56_60 <- sum(data[data$age >= 56 & data$age <= 60 & data$educationLevel == 'Graduate',]['joviality'])/count(data[data$age >= 56 & data$age <= 60 & data$educationLevel == 'Graduate',])
+
+## Calculate the average happiness index with "Low" education level of each age group 
+# The average happiness index of participants who have low education level and whose age is between 18 ~ 20
+e4_18_20 <- sum(data[data$age >= 18 & data$age <= 20 & data$educationLevel == 'Low',]['joviality'])/count(data[data$age >= 18 & data$age <= 20 & data$educationLevel == 'Low',])
+# The average happiness index of participants who have low education level and whose age is between 21 ~ 25
+e4_21_25 <- sum(data[data$age >= 21 & data$age <= 25 & data$educationLevel == 'Low',]['joviality'])/count(data[data$age >= 21 & data$age <= 25 & data$educationLevel == 'Low',])
+# The average happiness index of participants who have low education level and and whose age is between 26 ~ 30
+e4_26_30 <- sum(data[data$age >= 26 & data$age <= 30 & data$educationLevel == 'Low',]['joviality'])/count(data[data$age >= 26 & data$age <= 30 & data$educationLevel == 'Low',])
+# The average happiness index of participants who have low education level and and whose age is between 31 ~ 35
+e4_31_35 <- sum(data[data$age >= 31 & data$age <= 35 & data$educationLevel == 'Low',]['joviality'])/count(data[data$age >= 31 & data$age <= 35 & data$educationLevel == 'Low',])
+# The average happiness index of participants who have low education level and and whose age is between 36 ~ 40
+e4_36_40 <- sum(data[data$age >= 36 & data$age <= 40 & data$educationLevel == 'Low',]['joviality'])/count(data[data$age >= 36 & data$age <= 40 & data$educationLevel == 'Low',])
+# The average happiness index of participants who have low education level and and whose age is between 41 ~ 45
+e4_41_45 <- sum(data[data$age >= 41 & data$age <= 45 & data$educationLevel == 'Low',]['joviality'])/count(data[data$age >= 41 & data$age <= 45 & data$educationLevel == 'Low',])
+# The average happiness index of participants who have low education level and and whose age is between 46 ~ 50
+e4_46_50 <- sum(data[data$age >= 46 & data$age <= 50 & data$educationLevel == 'Low',]['joviality'])/count(data[data$age >= 46 & data$age <= 50 & data$educationLevel == 'Low',])
+# The average happiness index of participants who have low education level and and whose age is between 51 ~ 55
+e4_51_55 <- sum(data[data$age >= 51 & data$age <= 55 & data$educationLevel == 'Low',]['joviality'])/count(data[data$age >= 51 & data$age <= 55 & data$educationLevel == 'Low',])
+# The average happiness index of participants who have low education level and and whose age is between 56 ~ 60
+e4_56_60 <- sum(data[data$age >= 56 & data$age <= 60 & data$educationLevel == 'Low',]['joviality'])/count(data[data$age >= 56 & data$age <= 60 & data$educationLevel == 'Low',])
+```
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+dt_frame <- data.frame(age_group=c('18~20', '21~25', '26~30', '31~35', '36~40', '41~45', '46~50', '51~55', '56~60'),
+                       cnt=c(c18_20, c21_25, c26_30, c31_35, c36_40, c41_45, c46_50, c51_55, c56_60),
+                       avg_happiness=c(h18_20, h21_25, h26_30, h31_35, h36_40, h41_45, h46_50, h51_55, h56_60),
+                       cnt_have_kids=c(child18_20, child21_25, child26_30, child31_35, child36_40, child41_45, child46_50, child51_55, child56_60),
+                       avg_happiness_kids=c(hk18_20, hk21_25, hk26_30, hk31_35, hk36_40, hk41_45, hk46_50, hk51_55, hk56_60),
+                       avg_happiness_college=c(e1_18_20$n, e1_21_25$n, e1_26_30$n, e1_31_35$n, e1_36_40$n, e1_41_45$n, e1_46_50$n, e1_51_55$n, e1_56_60$n),
+                       avg_happiness_bachelors=c(e2_18_20$n, e2_21_25$n, e2_26_30$n, e2_31_35$n, e2_36_40$n, e2_41_45$n, e2_46_50$n, e2_51_55$n, e2_56_60$n),
+                       avg_happiness_graduate=c(e3_18_20$n, e3_21_25$n, e3_26_30$n, e3_31_35$n, e3_36_40$n, e3_41_45$n, e3_46_50$n, e3_51_55$n, e3_56_60$n),
+                       avg_happiness_low=c(e4_18_20$n, e4_21_25$n, e4_26_30$n, e4_31_35$n, e4_36_40$n, e4_41_45$n, e4_46_50$n, e4_51_55$n, e4_56_60$n))
+
+str(dt_frame)
+```
+
+# 4. Plotting charts
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+agePlot <- ggplot(data=dt_frame, aes(x=age_group, y=cnt)) + 
+  geom_col(aes(x=dt_frame$age_group, y=dt_frame$cnt), width=0.7, color="skyblue") + 
+  geom_text(aes(label=dt_frame$cnt), check_overlap=TRUE, colour="blue", fontface="bold", position=position_stack(vjust = 1.04)) + 
+  ggtitle("Distribution of Participants' Age")
+
+agePlot
+```
+
+Through observing the histogram chart, it can be found that the age distribution of all the participants is very even, except that the number of people aged 18 to 20 is relatively small due to the age span.  The number of participants in all the other age groups are about 115.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+kids_plot<- ggplot(data=dt_frame, aes(x=age_group, y=cnt)) +
+           geom_point(aes(x=dt_frame$age_group, y=dt_frame$cnt), colour=alpha('red', 1), size=5) + 
+           geom_line(aes(x=dt_frame$age_group, y=dt_frame$cnt, group=1), colour=alpha('red', 1), size=2) + 
+           geom_point(aes(x=dt_frame$age_group, y=dt_frame$cnt_have_kids), colour=alpha('blue', 1), size=5) +
+           geom_line(aes(x=dt_frame$age_group, y=dt_frame$cnt_have_kids, group=1), colour=alpha('blue', 1), size=2) + 
+           geom_text(aes(label=dt_frame$cnt),  check_overlap=TRUE, colour="darkgreen", fontface="bold", position=position_stack(vjust = 1.08)) + 
+           geom_text(aes(label=paste0(dt_frame$cnt_have_kids, " (", round(dt_frame$cnt_have_kids/dt_frame$cnt, digits=2), ")")),  check_overlap=FALSE, colour="darkgreen", fontface="bold", position=position_stack(vjust = 0.45)) + 
+           ggtitle("Comparison among participants with children and those without children")
+kids_plot
+```
+
+Through observing the line chart, it is not difficult to find that these participants living in Ohio, USA generally do not want children, because the proportion of participants with children in each age group is about 30%, and the distribution is very even. And there is no certain age group whose ratio is particularly high or particularly low.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+happiness_plot<- ggplot(data=dt_frame, aes(x=age_group, y=avg_happiness)) +
+                 geom_point(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness), colour=alpha('red', 1), size=5) + 
+                 geom_line(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness, group=1), colour=alpha('red', 1), size=2) + 
+                 geom_point(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_kids), colour=alpha('blue', 1), size=5) +
+                 geom_line(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_kids, group=1), colour=alpha('blue', 1), size=2) + 
+                 geom_text(aes(label=round(dt_frame$avg_happiness, 2)),  check_overlap=TRUE, colour="red", fontface="bold", position=position_stack(vjust = 0.85)) + 
+                 geom_text(aes(label=round(dt_frame$avg_happiness_kids, 2)),  check_overlap=FALSE, colour="blue", fontface="bold", position=position_stack(vjust = 1.2)) + 
+                 ggtitle("The happiness index of participants with children compared with participants without children")
+happiness_plot
+```
+
+Through observing the line graph, it can be found that the influence of children on participants' happiness index is mainly divided into two stages: 20 to 35 years old and 36 to 55 years old. The average happiness index of participants aged 20 to 35 with children is lower than the average happiness index in the same age group, however, the happiness level of participants aged 36 to 55 with children is higher than the average level in the same age group.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+edu_plot<- ggplot(data=dt_frame, aes(x=age_group, y=avg_happiness))+
+           
+           geom_point(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness), colour=alpha('red', 1), size=5) + 
+           geom_line(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness, group=1), colour=alpha('red', 1), size=2) + 
+           annotate("text", label = "Average Level", x = 2, y = 0.350, size = 5, colour = "red") +
+
+           geom_point(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_graduate), colour=alpha('blue', 1), size=5) +
+           geom_line(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_graduate, group=1), colour=alpha('blue', 1), size=2) + 
+           annotate("text", label = "Graduate", x = 2, y = 0.325, size = 5, colour = "blue") + 
+  
+           geom_point(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_bachelors), colour=alpha('darkgreen', 1), size=5) +
+           geom_line(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_bachelors, group=1), colour=alpha('darkgreen', 1), size=2) + 
+           annotate("text", label = "Bachelors", x = 2, y = 0.300, size = 5, colour = "darkgreen") + 
+           
+           geom_point(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_college), colour=alpha('orange', 1), size=5) +
+           geom_line(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_college, group=1), colour=alpha('orange', 1), size=2) +
+           annotate("text", label = "College", x = 2, y = 0.275, size = 5, colour = "orange") + 
+
+           geom_point(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_low), colour=alpha('cyan', 1), size=5) +
+           geom_line(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_low, group=1), colour=alpha('cyan', 1), size=2) +
+           annotate("text", label = "Low", x = 2, y = 0.250, size = 5, colour = "cyan") + 
+
+           ggtitle("Comparison among participants with different education level")
+
+edu_plot
+```
+
+By looking at the graph, it can be seen that there is no significant relationship between the participants' happiness index and education level.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+interest_plot<- ggplot(data=data, aes(x=interestGroup, colour=interestGroup)) + 
+            geom_histogram(stat="count", bins=10, fill="skyblue", color="skyblue")
+
+interest_plot
+```
+
+Although, so far, the grouping criteria of each interest group has not been clear yet, it is still easy for us to observe that the number of people in each interest group is still very even.
+
+# 5. Conclusion
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+summary_plot <- ((happiness_plot / edu_plot) | agePlot) + 
+                plot_annotation(tag_levels = 'I')
+summary_plot <- summary_plot & theme_economist()
+
+summary_plot
+```
+
+### Summary
+
+1. By analyzing the line graph of the happiness index, it is not difficult to find that children will bring more stress rather than joy to young couples under the age of 35; Having accumulated a certain amount of wealth and professional contacts, children may often bring them more happiness.
+2. By analyzing the education level chart, we cannot currently draw a relationship between happiness index and educational level, because participants with low education like 36 to 40 years old have the highest average happiness index, while for Graduate students between the ages of 45 and 50 had the lowest average happiness scores.
+
+Through above basic statistical analysis, it can be clearly found that the distribution of the data set is very even which means this is a very ideal dataset.

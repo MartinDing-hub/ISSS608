@@ -1,12 +1,14 @@
 ---
-title: "Ding's Website for ISSS608"
+title: "Website for ISSS608"
+author: 
+  - name: Ding Yanmu
 description: |
-  Welcome to the website. I hope you enjoy it!
+  Welcome to the website. I hope you to enjoy reading it!
 site: distill::distill_website
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 
 # Learn more about creating websites with Distill at:
 # https://rstudio.github.io/distill/website.html

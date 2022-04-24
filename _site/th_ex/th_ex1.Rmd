@@ -292,7 +292,8 @@ str(dt_frame)
 agePlot <- ggplot(data=dt_frame, aes(x=age_group, y=cnt)) + 
   geom_col(aes(x=dt_frame$age_group, y=dt_frame$cnt), width=0.7, color="skyblue") + 
   geom_text(aes(label=dt_frame$cnt), check_overlap=TRUE, colour="blue", fontface="bold", position=position_stack(vjust = 1.04)) + 
-  ggtitle("Distribution of Participants' Age")
+  theme(axis.text.x = element_text(angle = 90)) + 
+  ggtitle("Age Distribution")
 
 agePlot
 ```
@@ -307,7 +308,8 @@ kids_plot<- ggplot(data=dt_frame, aes(x=age_group, y=cnt)) +
            geom_line(aes(x=dt_frame$age_group, y=dt_frame$cnt_have_kids, group=1), colour=alpha('blue', 1), size=2) + 
            geom_text(aes(label=dt_frame$cnt),  check_overlap=TRUE, colour="darkgreen", fontface="bold", position=position_stack(vjust = 1.08)) + 
            geom_text(aes(label=paste0(dt_frame$cnt_have_kids, " (", round(dt_frame$cnt_have_kids/dt_frame$cnt, digits=2), ")")),  check_overlap=FALSE, colour="darkgreen", fontface="bold", position=position_stack(vjust = 0.45)) + 
-           ggtitle("Comparison among participants with children and those without children")
+           theme(axis.text.x = element_text(angle = 90)) +
+           ggtitle("Kids statistic")
 kids_plot
 ```
 
@@ -321,7 +323,8 @@ happiness_plot<- ggplot(data=dt_frame, aes(x=age_group, y=avg_happiness)) +
                  geom_line(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_kids, group=1), colour=alpha('blue', 1), size=2) + 
                  geom_text(aes(label=round(dt_frame$avg_happiness, 2)),  check_overlap=TRUE, colour="red", fontface="bold", position=position_stack(vjust = 0.85)) + 
                  geom_text(aes(label=round(dt_frame$avg_happiness_kids, 2)),  check_overlap=FALSE, colour="blue", fontface="bold", position=position_stack(vjust = 1.2)) + 
-                 ggtitle("The happiness index of participants with children compared with participants without children")
+                 theme(axis.text.x = element_text(angle = 90)) +
+                 ggtitle("Happiness - kids")
 happiness_plot
 ```
 
@@ -350,7 +353,8 @@ edu_plot<- ggplot(data=dt_frame, aes(x=age_group, y=avg_happiness))+
            geom_line(aes(x=dt_frame$age_group, y=dt_frame$avg_happiness_low, group=1), colour=alpha('cyan', 1), size=2) +
            annotate("text", label = "Low", x = 2, y = 0.250, size = 5, colour = "cyan") + 
 
-           ggtitle("Comparison among participants with different education level")
+           theme(axis.text.x = element_text(angle = 90)) +
+           ggtitle("Happiness - education level")
 
 edu_plot
 ```
@@ -369,11 +373,7 @@ Although, so far, the grouping criteria of each interest group has not been clea
 # 5. Conclusion
 
 ```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
-summary_plot <- ((happiness_plot / edu_plot) | agePlot) + 
-                plot_annotation(tag_levels = 'I')
-summary_plot <- summary_plot & theme_economist()
-
-summary_plot
+agePlot / happiness_plot |edu_plot
 ```
 
 ### Summary

@@ -1,0 +1,201 @@
+---
+title: "Peer learning from classmate's Take-home Exercise 1"
+description: |
+  The purpose of this assignment is to observe classmates' blogs and to find their advantages and disadvantages. This can help me have a clearer understanding about what features a good data report should have. In addition, this also allows me to reflect on my first assignment, which can help me to improve my deficiencies and defects in the process of data analysis.
+author:
+  - name: Ding Yanmu
+    url: https://github.com/MartinDing-hub/ISSS608
+    affiliation: learning blog link
+    affiliation_url: https://jeanrao.netlify.app/th_ex/th1.html
+date: "May 1, 2022"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+packages <- c('tidyverse', 'patchwork', 'figpatch')
+
+for(p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+
+```
+
+***Personal statement:*** *This observation and learning blog is Rao Ningzhen's first homework.*
+
+# 1. Monochrome bar charts
+
+## 1.1 Advantages
+
+### 1.1.1 Quantitative scale for bar chart should start at zero
+
+The ordinates of the following two bar charts which are used to count participants are zero-based. Although this is only a tiny detail, it is crucial for bar charts because if the data coordinate in a bar chart does not start from zero, the relationship between variables reflected in this bar chart will not make any sense.
+
+### 1.1.2 Tick marks are superfluous on categorical scale.
+
+When we use bar charts for data statistics, categorical coordinates should not have extra tick marks, because it doesn't make any sense. Take the right figure below as an example, when we want to know the distribution of participants who have children, the classification must be certain, either "True" or "False". There is no option of "may have", so it is unnecessary to add extra tick marks in the bar chart.
+
+Of course, someone will rebut me and give me such a scenario:<br>
+     &emsp;&emsp;***Count the sales of a clothing store for last year. And use one bar chart to show both monthly sales and quarterly sales.***<br>
+They may argue that, in this case, the x-axis should be used to represent the quarters with extra ticks for the specific months.
+
+This is actually a method, but this is not the best way to solve this problem. When we use a chart to display data, the clarity of the chart must be the top priority, so that the reader can immediately understand what the author wants to show through this figure. As long as there is a part of a chart that requires readers to guess, it means that the chart is not perfect. For the above scenario, we can use the month as the X-axis of the histogram, and use different colors to distinguish each quarter. In this way, the entire chart will be more beautiful and clearer.
+
+### 1.1.3 Charts should have titles, and axes should also have labels
+
+When we use charts to display data, all the charts should have their own titles, and each axis should have its own label. Only we do this then the readers can clearly know what meaning of each chart. When we make data reports, we must always remember the principle that charts are used to reveal clear meaning in data to readers.
+
+In addition, titles and labels should be concise that we should use the shortest language to express the most meanings. The titles and labels only play a role in assisting understanding, and the chart itself is the key to displaying the value of the data. The most important thing is that if the titles and labels are too long, the charts will be very unsightly.
+
+## 1.2 Disdvantages
+
+### 1.2.1 Stick to the convention of making your graphs wider than being tall
+
+When we plot a chart, we should develop the habit of making the width of the figure larger than the height of the figure. We should pursue the principle of seeking truth from facts, when we use charts to reflect the features of data. Therefore, we should avoid strengthening or weakening the trend of data changes by manipulating the aspect ratio of the charts.
+
+Obviously, the following two histograms do not have a width greater than height.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+figure1 <- fig(path = "image/bar1.PNG")
+figure2 <- fig(path = "image/bar2.PNG")
+figure1 + figure2
+```
+
+# 2. Colored charts
+
+## 2.1 Advantages
+
+### 2.1.1 Use contrasting colors to represent different features
+
+The two charts below are good examples. Both of them highlight relatively important parts by using contrasting colors. If we want readers to grasp the most important data in a figure at first glance, using a strong color difference is a very effective method. Because it is very easy for human eyes to detect objects that are not very similar to the surrounding environment.
+
+In addition, when we compare two or more dimensions, the color difference between strongly contrasting colors can allow readers to more clearly observe the differences among various dimensions.
+
+### 2.1.2 Avoid using colourful or wallpaper background and special effects
+
+When we plot charts, we should use a simple and uniform background color like the two charts below. The charts are used to inspire readers instead of entertaining them. A colorful background just dazzles the reader. 
+
+Moreover, when we want to use the same color to represent different histograms, the colorful backgrounds or  backgrounds with different shades of one color will cause visual errors to our eyes. This will make us easily recognize multiple objects of the same color as multiple objects of different colors.
+
+Therefore, it is important to keep the background color of the charts simple and identical.
+
+In addition, special effects, such as 3D effects, should also be avoided in diagrams. This is because special effects will not only distract the readers, but some misleading icons will make the readers misunderstand the data in the charts as well.
+
+### 2.1.3 Use Horizontal Bar Charts Appropriately
+
+There are a least three advantages to using horizontal bar charts:
+  
+  1. **Long labels for the categories are easier to display and read.**  The horizontal bar chart can display the category labels in a natural, easy-to-read manner.
+  2. **Many categories are easier to display.** A horizontal bar chart can display the category names in a straightforward manner just by making the chart taller. This is an advantage for graphs on the printed page (in portrait mode) and for an HTML page because it is easy to scroll a web page vertically.
+  3. **Labels for many bars are easier to display without collision.** Horizontal charts allow you to display long labels in a natural way, whereas vertical charts of the same data don't have enough horizontal space between bars. There are various ways to rotate text, but in most cases a horizontal layout is easier to build and easier to read.
+
+The following second figure uses a horizontal histogram well to avoid the embarrassment that "HighSchoolOrCollege" cannot be fully displayed.
+
+## 2.2 Disadvantage
+
+The problem with these two charts is the same as the above ones. The width of the first chart is not greater than the height, so I will not explain it again.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+figure1 <- fig(path = "image/colored1.PNG")
+figure1
+```
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+figure2 <- fig(path = "image/colored2.PNG")
+figure2
+```
+
+# 3. Dot charts & Density charts
+
+## 3.1 Advantages
+
+### 3.1.1 Tick marks are necessary on continuous scale
+
+When the concepts represented by the horizontal and vertical coordinates of the chart are not objectively related, the initial scales of both coordinates should not overlap, because this not only doesn't make sense, but it easily causes the labels cannot be displayed completely due to overlapping as well.
+
+Just like the following figure, the horizontal coordinates represent age of the participants (starting with 18), and the vertical coordinates represent the ratio of the number of participants in each interest group to the total number of participants (starting with 0.00). Age and proportion are two completely different statistical dimensions, so even though both variables are stated from 0 in the dataset, their starting scales also should not overlap together.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+figure1 <- fig(path = "image/distribution1.PNG")
+figure1
+```
+
+## 3.2 Disadvantages
+
+### 3.2.1 Avoid using points to represent discrete values
+
+The chart below is a typical bad example when it comes to presenting statistical results for discrete data values. Not only it is very easy to dazzle people by looking at a dense dot map like this, but also it is not intuitive to use a dot map to show the happiness distribution of various age groups.
+
+In addition, bitmaps should be plotted with a grid, because this will help the readers identify x coordinate value and x coordinate value of each point. For example, in the following figure, if a point is not on the grid line, its  coordinate values are difficult to be read accurately.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+figure2 <- fig(path = "image/distribution2.PNG")
+figure2
+```
+
+# 4. Violin boxplot
+
+## 4.1 Advantages
+
+### 4.1.1 Use violin boxplot to display multi-dimensional information in the same chart
+
+The figure below is a good example, from which you can observe not only the median difference in happiness between participants with children and those without children, but also the participants with children and those without children. In which happiness index interval the people are concentrated.
+
+It can be seen that the violin boxplot is very suitable for showing the statistical distribution of scenarios, such as, gender statistic and true or false of a certain characteristic.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+figure1 <- fig(path = "image/violin_plot1.PNG")
+figure1
+```
+
+## 4.2 Disadvantages
+
+### 4.2.1 Violin boxplot should not be too narrow
+
+When we use the Violin boxplot to display the data distribution, the violin graphs should not be too crowded. The following figure is a bad example. The happiness distribution curves of each interest group are squeezed into long strips, which makes readers difficult to observe which happiness interval the participants in each interest group are concentrated in.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+figure2 <- fig(path = "image/violin_plot2.PNG")
+figure2
+```
+
+# 5. Reflection on my own assignment1
+
+### 5.1 Problem 1: Coordinate labels are not placed horizontally
+
+Although rotating the labels of the horizontal axis by 90 degrees avoids the problem of overlapping labels, the vertical labels also directly reduce the readability of the entire chart.
+
+**Solution:** Use a horizontal bar chart to plot.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+figure1 <- fig(path = "image/problem1.PNG")
+figure1
+```
+
+### 5.2 Problem 2: Chart is too colorful
+
+Too bright colors in a same line chart are uncomfortable for reader to observe, and overlapping lines of different colors make it even harder to see each data point in the chart.
+
+**Solution:** Use violin boxplot to display the happiness index of participants at various levels of education.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+figure1 <- fig(path = "image/problem2.PNG")
+figure1
+```
+
+### 5.3 Problem 3: Charts are too crowded
+
+Here, I should not use **patchwork** package just for using. According to different kinds of data, I should choose suitable tools to display them. In addition, I didn't pay any attention to the layout when I gathered multiple charts onto one canvas. This makes that some information in the charts cannot be displayed completely.
+
+**Solution:** Adjust the width and height of each chart and display it separately.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+figure1 <- fig(path = "image/problem3.PNG")
+figure1
+```

@@ -3,10 +3,8 @@ title: "Untitled"
 description: |
   A new article created using the Distill format.
 author:
-  - name: Nora Jones 
-    url: https://example.com/norajones
-    affiliation: Spacely Sprockets
-    affiliation_url: https://example.com/spacelysprokets
+  - name: Ding Yanmu 
+    url: https://github.com/MartinDing-hub/ISSS608
 date: "`r Sys.Date()`"
 output: distill::distill_article
 ---

@@ -2,6 +2,7 @@
 title: "Website for ISSS608"
 author: 
   - name: Ding Yanmu
+    url: https://github.com/MartinDing-hub/ISSS608
 description: |
   Welcome to the website. I hope you to enjoy reading it!
 site: distill::distill_website

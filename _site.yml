@@ -20,4 +20,8 @@ navbar:
       menu:
       - text: "In-class Exercise 4"
         href: "In-class_Ex/In-class_Ex04.html"
+    - text: "Visual Analytics Project"
+      menu:
+      - text: "Proposal"
+        href: "gp/proposal.html"
 output: distill::distill_article

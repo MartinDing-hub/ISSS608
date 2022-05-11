@@ -1,22 +1,45 @@
 ---
-title: "Untitled"
+title: "Take-home Exercise 3"
 description: |
-  A new article created using the Distill format.
+  Putting Visual Analytics into Practical Use
+      
 author:
-  - name: Nora Jones 
-    url: https://example.com/norajones
-    affiliation: Spacely Sprockets
-    affiliation_url: https://example.com/spacelysprokets
-date: "`r Sys.Date()`"
-output: distill::distill_article
+  - name: Ding Yanmu
+    url: https://dingyanmu.netlify.app/
+date: "May 10, 2022"
+output: 
+  distill::distill_article:
+    toc: true
+    toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
+# 1 Introduction
+The task of Take-home Exercise 3 is to reveal the economic of the city of Engagement, Ohio USA by using appropriate static and interactive statistical graphics methods.<br>
+
+There are three questions will be answered in this blog.
+
+  - How does the financial health of the residents change over the period covered by the dataset?
+  - How do wages compare to the overall cost of living in Engagement?
+  - Are there groups that appear to exhibit similar patterns?
+
+# 2 Data Discription
+The data file used for this exercise is ***FinancialJournal.csv***. This table contains information about financial transactions. Following are the definitions of 4 columns of data:
+
+  - **participantId** (integer): unique ID corresponding to the participant affected
+  - **timestamp** (datetime): the time when the check-in was logged
+  - **category** (string factor): a string describing the expense category, one of {“Education”, “Food”, “Recreation”, “RentAdjustment”, “Shelter”, “Wage”}
+  - **amount** (double): the amount of the transaction
+
+# 3 Data Preparation
+## 3.1 Installing and launching R packages
+For this exercise, xxxxxx. The R code in the following code chunk is used to install the required packages and load them into RStudio environment.
+
 ```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
-packages <- c('tidyverse', 'patchwork', 'ggthemes', 'dplyr')
+packages <- c('tidyverse', 'lubridate', 'patchwork')
 
 for(p in packages){
   if(!require(p, character.only = T)){
@@ -24,27 +47,148 @@ for(p in packages){
   }
   library(p, character.only = T)
 }
-
 ```
+
+## 3.2 Importing the dataset
+Data import was completed by using read_csv() which is a function in **readr** package. This function is useful for reading delimited files into a tibble. Here, head() function is used to display the first 6 rows of data in the dataset.
 
 ```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
-data <- read_csv("data/FinancialJournal.csv")
-# Showing the structure of the dataset
-data <- data %>% distinct()
-# data[data$participantId == 0, ]
-data <- group_by(data, participantId, timestamp, category)
-data <- summarise(data,
-                  avg_sales = mean(amount))
-data
+raw_data <- read_csv("data/FinancialJournal.csv")
+head(raw_data)
 ```
 
+## 3.3 Data Preprocessing
+### 3.3.1 Data Cleaning
+When I used filter function in Excel to observe the data, I found that there are some identical data rows in the table. Therefore, I need to remove these duplicate data before visualizing the data. **raw_data %>% distinct()** in the following R code chunk is used to complete this step.
 
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+data <- raw_data %>% distinct()
+nrow(raw_data) - nrow(data)
+```
+We can see that there are 1113 duplicate rows in the raw dataset.
 
-Distill is a publication format for scientific and technical writing, native to the web. 
+### 3.3.2 Get participants' average monthly income and average monthly outcome
+Through analyzing the data in the **Participants.csv** table, I have already found that the number of participants in this study is fairly evenly distributed in five aspects: age, family size, whether there are children, education level, and interests.<br>
 
-Learn more about using Distill for R Markdown at <https://rstudio.github.io/distill>.
+Therefore, the trend in participants' average monthly wages is a good indicator of financial health in Ohio state.
 
+```{r eval=TRUE, echo=TRUE, message=TRUE, warning=FALSE}
+num_participant <- max(data$participantId) - min(data$participantId) + 1
 
+Month <- c()
+Avg_wage <- c()
+avg_food_list <- c()
+Education_Expense <- c()
+Recreation_Expense <- c()
+Rental_Income <- c()
+Rent_Cost <- c()
+for (y in min(year(data$timestamp)):max(year(data$timestamp))){
+  tmp <- data[year(data$timestamp) == y,]
+  tmp_month <- month(tmp$timestamp)
+  for (m in min(tmp_month):max(tmp_month)){
+    y <- as.character(y)
+    m <- as.character(m)
+    Month <- append(Month, paste(y, m, sep = "-"))
+    tmp_data <- tmp[month(tmp$timestamp) == m,]
+    tmp_wage <- tmp_data[tmp_data$category == "Wage",]
+    tmp_food <- tmp_data[tmp_data$category == "Food",]
+    tmp_edu <- tmp_data[tmp_data$category == "Education",]
+    tmp_rec <- tmp_data[tmp_data$category == "Recreation",]
+    tmp_rent <- tmp_data[tmp_data$category == "RentAdjustment",]
+    tmp_shel <- tmp_data[tmp_data$category == "Shelter",]
+    Avg_wage <- append(Avg_wage, sum(tmp_wage$amount) / num_participant)
+    avg_food_list <- append(avg_food_list, sum(tmp_food$amount) / num_participant)
+    Education_Expense <- append(Education_Expense, sum(tmp_edu$amount) / num_participant)
+    Recreation_Expense <- append(Recreation_Expense, sum(tmp_rec$amount) / num_participant)
+    Rental_Income <- append(Rental_Income, sum(tmp_rent$amount) / num_participant)
+    Rent_Cost <- append(Rent_Cost, sum(tmp_shel$amount) / num_participant)
+  }
+}
 
+Engel_Coefficient <- avg_food_list / (avg_food_list + Education_Expense + Recreation_Expense + Rent_Cost)
 
+month_fee_table <- data.frame(Month, Avg_wage, Engel_Coefficient, Education_Expense, Recreation_Expense, Rental_Income, Rent_Cost)
+month_fee_table$Month<- factor(month_fee_table$Month, 
+                               levels = Month, ordered = TRUE)
 
+head(month_fee_table)
+```
+
+# 4 Data visualization analysis
+## 4.1 Trend of monthly average wages
+Through observing the following bar chart, it is obvious that the per capita wage in March 2022 is nearly twice as large as the per capita wages in April 2022. I think the reason may be the outbreak of Omicron in Ohio in March 2022. The pandemic created a huge impact on economy of Ohio state, which led to a sharp drop in per capita income.<br>
+
+In 2023, although per capita wages will rebound in March, the overall trend will be still downward. Thus, I can initially infer that the Ohio residents' financial health is not very good.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+p1 <- ggplot(data = month_fee_table, aes(x = Month, y = Avg_wage)) + 
+      geom_col(width = 0.5, color = "skyblue", fill = "skyblue") + 
+      ylim(0, 7000) + 
+      coord_flip() + 
+      scale_x_discrete(limits=rev(Month)) + 
+      ggtitle("Monthly average wages")
+p1
+```
+
+## 4.2 Trend of Engel_Coefficient
+According to the Engel coefficient standard designated by the United Nations, Ohio is still a wealthy area, but increasing 5 percentage in the Engel coefficient has already proved that the financial health in Ohio state is very unsatisfactory.
+
+Generally, people's income is inversely proportional to the Engel coefficient. However, the participants' predicted Engel coefficient will show a downward trend in March, 2023. This trend will keep same as the monthly average salary, which indicates that the US government may have implement some economic regulations or other policies to prevente further economic deterioration.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+p2 <- ggplot(data = month_fee_table, aes(x = Month, y = Engel_Coefficient)) + 
+      geom_point(colour=alpha('blue', 1), size=5) + 
+      geom_line(aes(group=1), colour=alpha('blue', 1), size=2) + 
+      ylim(0.1, 0.3) + 
+      theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, face = "bold")) + 
+      ggtitle("Engel_Coefficient")
+p2
+```
+
+## 4.3 Trends of rental income and rental cost
+Through observing the following two charts, we can see that both average rental income and average rental cost fell down in April 2022. And both of them will not have obvious changing trend in the subsequent months. This is different from my guess that participants who have vacant homes may replenish their income by raising rents, which may cause renters to pay more money for the rent bills.
+
+I guess the decline in rents may also be related to some economic policies published by the Ohio government. Obviously, such a situation is very beneficial to Ohio's economic health, because it avoids to widen the gap between the rich and the poor. Moreover, reducing people's housing pressure can also guarantee social stability.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+p3 <- ggplot(data = month_fee_table, aes(x = Month, y = Rental_Income)) + 
+      geom_col(width = 0.5, color = "skyblue", fill = "skyblue") + 
+      ylim(0, 60) + 
+      coord_flip() + 
+      scale_x_discrete(limits=rev(Month)) + 
+      ggtitle("Rental_Income")
+
+p4 <- ggplot(data = month_fee_table, aes(x = Month, y = abs(Rent_Cost))) + 
+      geom_col(width = 0.5, color = "pink", fill = "pink") + 
+      ylab("Rent_Cost") + 
+      ylim(0, 650) + 
+      coord_flip() + 
+      scale_x_discrete(limits=rev(Month)) + 
+      ggtitle("Rent_Cost")
+
+p3 | p4
+```
+
+## 4.4 Trends of Recreation_Expense
+By observing the following chart, it can be seen that the participants' recreation expenses displays a downward trend over time. Even if we only look at the two data in April 2022 and May 2023, the difference is still close to 200 dollars.
+
+Therefore, from the phenomenon that participants begin to reduce recreation cost, it is not difficult to find that the overall financial health in Ohio state has indeed got a certain impact.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+p5 <- ggplot(data = month_fee_table, aes(x = Month, y = abs(Recreation_Expense))) + 
+      geom_point(colour=alpha('blue', 1), size=5) + 
+      geom_line(aes(group=1), colour=alpha('blue', 1), size=2) + 
+      ylab("Recreation_Expense") + 
+      ylim(200, 700) + 
+      theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, face = "bold")) + 
+      ggtitle("Recreation_Expense")
+
+p5
+```
+
+# 5 Conclusion
+By analyzing the data in the `FinancialJournal.csv` file, we can draw the following three conclusions:
+
+1. Under the influence of the pandemic or some other external factors, Ohio's financial health has indeed suffered a certain impact.
+2. Through the analysis of the Engel coefficient, it can be inferred that the Ohio government has indeed implemented a series of relevant policies to recover the economy to avoid further financial loss.
+3. So far, it seems impossible to recover the economy in a short period. At least, all the financial loss cannot be recovered before May 2023.

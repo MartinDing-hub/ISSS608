@@ -36,7 +36,7 @@ The data file used for this exercise is ***FinancialJournal.csv***. This table c
 
 # 3 Data Preparation
 ## 3.1 Installing and launching R packages
-For this exercise, xxxxxx. The R code in the following code chunk is used to install the required packages and load them into RStudio environment.
+For this exercise, I used three libraries. They are **tidyverse**, **lubridate** and **patchwork**. The R code in the following code chunk is used to install the required packages and load them into RStudio environment.
 
 ```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
 packages <- c('tidyverse', 'lubridate', 'patchwork')

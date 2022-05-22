@@ -1,0 +1,584 @@
+---
+title: "Take-home Exercise 4"
+description: |
+  Visualising and Analysing Daily Routines
+      
+author:
+  - name: Ding Yanmu
+    url: https://dingyanmu.netlify.app/
+date: "May 22, 2022"
+output: 
+  distill::distill_article:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# 1 Introduction
+Task of Take-home Exercise 4 is to reveal the daily routines of two selected participants of the city of Engagement, Ohio USA by using appropriate static and interactive statistical graphics methods.<br>
+
+In this exercise, I am going to use ViSIElse package to display the daily routines of two selected participants.
+
+# 2 Data Discription
+The data file used for this exercise is ***ParticipantStatusLogs1.csv***. This table contains information about each participant's daily routine. Following are the definitions of each column of data:
+
+  - **timestamp** (datetime): the time when the status was logged
+  - **currentLocation** (point): the location of the participant within the city at the time the status was logged
+  - **participantId** (integer): unique ID assigned to each participant
+  - **currentMode** (string): a string representing the mode the participant is in at the time the status was logged, one of {"AtHome", "Transport", "AtRecreation", "AtRestaurant", "AtWork"}.
+  - **hungerStatus** (string): a string representing the participant’s hunger status at the time the status was logged
+  - **sleepStatus** (string): a string representing the participant’s sleep status at the time the status was logged
+  - **apartmentId** (integer): the integer ID corresponding to the apartment in which the participant resides at the time the status was logged
+  - **availableBalance** (float): the balance in the participant’s financial account (negative if in debt)
+  - **jobId** (integer): the integer ID corresponding to the job the participant holds at the time the status was logged, N/A if unemployed
+  - **financialStatus** (string): a string representing the participant’s sleep status at the time the status was logged
+  - **dailyFoodBudget** (double): the amount of money the participant has budgeted for food that day
+  - **weeklyExtraBudget** (double): the amount of money the participant has budgeted for miscellaneous expenses that week
+
+
+# 3 Data Preparation
+## 3.1 Installing and launching R packages
+For this exercise, I used 8 libraries. They are **sf**, **tmap**, **ViSiElse**, **lubridate**, **clock**, **sftime**, **rmarkdown**, **tidyverse** and **qdapTools**. The R code in the following code chunk is used to install the required packages and load them into RStudio environment.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+packages <- c('sf', 'tmap', 'ViSiElse', 
+              "lubridate", "clock", "sftime", 
+              "rmarkdown", "tidyverse", "qdapTools")
+
+for(p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+```
+
+## 3.2 Importing the dataset
+Data import was completed by using read_sf() which is a function in **sf** package. This function is useful for reading delimited files into a tibble.
+
+```{r echo = TRUE, eval = FALSE, warning = FALSE, message = FALSE}
+raw_data <- read_sf("data/ParticipantStatusLogs1.csv", options="GEOM_POSSIBLE_NAMES=location")
+```
+
+Since the size of the original csv file exceeds 200MB, which means this file cannot be committed to the GitHub repository, I integrate the data and save it as rds format to reduce the size of the source data file. In addition, transferring data into rds format won't lead to the data missing, and reducing the data file size can read the data faster.
+
+The R code in the following code chunk is used to save source data as rds file.
+
+```{r echo = TRUE, eval = FALSE, warning = FALSE, message = FALSE}
+logs_data <- raw_data %>%
+  mutate(Timestamp = date_time_parse(timestamp,
+                                     zone = "",
+                                     format = "%Y-%m-%dT%H:%M:%S")) %>%
+  mutate(day = get_day(Timestamp)) %>%
+  filter(day(timestamp) == 2)
+write_rds(logs_data, "data/rds/ParticipantStatusLogs1.rds")
+```
+
+After transferring the data file into rds format, next time, I can directly use read_rds to read the data in the rds format file.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+logs_data <- read_rds("data/rds/ParticipantStatusLogs1.rds")
+print(logs_data)
+```
+
+## 3.3 Data Preprocessing
+This exercise only selects participants No. 1 and No. 2 to display their daily life from 00:00:00 to 23:59:59 on March 2, 2022, so their data needs to be selected first.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+logs_1 <- logs_data[logs_data$participantId == 1,]
+logs_1 <- logs_1[day(logs_1$timestamp) == 2,]
+
+time_stamp <- c()
+for (t in logs_1$timestamp){
+  time_stamp <- append(time_stamp, strptime(t, "%Y-%m-%dT%H:%M:%S"))
+}
+mode <- c()
+for (m in logs_1$currentMode){
+  mode <- append(mode, m)
+}
+id_1_logs <- data.frame(time_stamp, mode)
+
+cur_mode <- ""
+cur_hungry <- ""
+cur_sleep <- ""
+start_home_list <- c()
+end_home_list <- c()
+start_work_list <- c()
+end_work_list <- c()
+start_tran_list <- c()
+end_tran_list <- c()
+start_rest_list <- c()
+end_rest_list <- c()
+start_recr_list <- c()
+end_recr_list <- c()
+for (i in 1:length(id_1_logs$mode)){
+  tmp_mode <- id_1_logs$mode[i]
+  # print(tmp_mode)
+  tmp_time <- id_1_logs$time_stamp[i]
+  # print(tmp_time)
+  if (tmp_mode != cur_mode && cur_mode == ""){
+    if (tmp_mode == "AtHome"){
+      start_home_list <- append(start_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      cur_mode <- tmp_mode
+    }else if(tmp_mode == "Transport"){
+      start_tran_list <- append(start_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      cur_mode <- tmp_mode
+    }else if(tmp_mode == "AtRecreation"){
+      start_recr_list <- append(start_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      cur_mode <- tmp_mode
+    }else if(tmp_mode == "AtRestaurant"){
+      start_rest_list <- append(start_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      cur_mode <- tmp_mode
+    }else if(tmp_mode == "AtWork"){
+      start_work_list <- append(start_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      cur_mode <- tmp_mode
+    }
+  }else if (tmp_mode != cur_mode && cur_mode != ""){
+    if (cur_mode == "AtHome"){
+      end_home_list <- append(end_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      if (tmp_mode == "Transport"){
+        start_tran_list <- append(start_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRecreation"){
+        start_recr_list <- append(start_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRestaurant"){
+        start_rest_list <- append(start_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtWork"){
+        start_work_list <- append(start_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }
+      cur_mode <- tmp_mode
+    }else if(cur_mode == "Transport"){
+      end_tran_list <- append(end_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      if (tmp_mode == "AtHome"){
+        start_home_list <- append(start_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRecreation"){
+        start_recr_list <- append(start_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRestaurant"){
+        start_rest_list <- append(start_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtWork"){
+        start_work_list <- append(start_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }
+      cur_mode <- tmp_mode
+    }else if(cur_mode == "AtRecreation"){
+      end_recr_list <- append(end_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      if (tmp_mode == "Transport"){
+        start_tran_list <- append(start_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtHome"){
+        start_home_list <- append(start_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRestaurant"){
+        start_rest_list <- append(start_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtWork"){
+        start_work_list <- append(start_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }
+      cur_mode <- tmp_mode
+    }else if(cur_mode == "AtRestaurant"){
+      end_rest_list <- append(end_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      if (tmp_mode == "Transport"){
+        start_tran_list <- append(start_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRecreation"){
+        start_recr_list <- append(start_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtHome"){
+        start_home_list <- append(start_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtWork"){
+        start_work_list <- append(start_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }
+      cur_mode <- tmp_mode
+    }else if(cur_mode == "AtWork"){
+      end_work_list <- append(end_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      if (tmp_mode == "Transport"){
+        start_tran_list <- append(start_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRecreation"){
+        start_recr_list <- append(start_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRestaurant"){
+        start_rest_list <- append(start_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtHome"){
+        start_home_list <- append(start_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }
+      cur_mode <- tmp_mode
+    }
+  }
+  if (tmp_time == strptime("2022-03-02T23:55:00Z", "%Y-%m-%dT%H:%M:%S")){
+    if (tmp_mode == "Transport"){
+      end_tran_list <- append(end_tran_list, 1440)
+    }else if (tmp_mode == "AtRecreation"){
+      end_recr_list <- append(end_recr_list, 1440)
+    }else if (tmp_mode == "AtRestaurant"){
+      end_rest_list <- append(end_rest_list, 1440)
+    }else if (tmp_mode == "AtHome"){
+      end_home_list <- append(end_home_list, 1440)
+    }else if (tmp_mode == "AtWork"){
+      end_work_list <- append(end_work_list, 1440)
+    }
+  }
+}
+
+lens <- c(length(start_home_list), length(start_recr_list), length(start_rest_list), length(start_tran_list), length(start_work_list))
+while (TRUE){
+  if (length(start_home_list) < max(lens)){
+    start_home_list <- append(start_home_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(start_recr_list) < max(lens)){
+    start_recr_list <- append(start_recr_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(start_rest_list) < max(lens)){
+    start_rest_list <- append(start_rest_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(start_tran_list) < max(lens)){
+    start_tran_list <- append(start_tran_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(start_work_list) < max(lens)){
+    start_work_list <- append(start_work_list, 0, 1)
+  }else{
+    break
+  }
+}
+
+while (TRUE){
+  if (length(end_home_list) < max(lens)){
+    end_home_list <- append(end_home_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(end_recr_list) < max(lens)){
+    end_recr_list <- append(end_recr_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(end_rest_list) < max(lens)){
+    end_rest_list <- append(end_rest_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(end_tran_list) < max(lens)){
+    end_tran_list <- append(end_tran_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(end_work_list) < max(lens)){
+    end_work_list <- append(end_work_list, 0, 1)
+  }else{
+    break
+  }
+}
+X1 <- data.frame(id = 1, start_home_list, end_home_list, start_recr_list, end_recr_list, start_rest_list, end_rest_list, start_tran_list, end_tran_list, start_work_list, end_work_list)
+```
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+logs_1 <- logs_data[logs_data$participantId == 2,]
+logs_1 <- logs_1[day(logs_1$timestamp) == 2,]
+
+time_stamp <- c()
+for (t in logs_1$timestamp){
+  time_stamp <- append(time_stamp, strptime(t, "%Y-%m-%dT%H:%M:%S"))
+}
+mode <- c()
+for (m in logs_1$currentMode){
+  mode <- append(mode, m)
+}
+id_1_logs <- data.frame(time_stamp, mode)
+
+cur_mode <- ""
+cur_hungry <- ""
+cur_sleep <- ""
+start_home_list <- c()
+end_home_list <- c()
+start_work_list <- c()
+end_work_list <- c()
+start_tran_list <- c()
+end_tran_list <- c()
+start_rest_list <- c()
+end_rest_list <- c()
+start_recr_list <- c()
+end_recr_list <- c()
+for (i in 1:length(id_1_logs$mode)){
+  tmp_mode <- id_1_logs$mode[i]
+  # print(tmp_mode)
+  tmp_time <- id_1_logs$time_stamp[i]
+  # print(tmp_time)
+  if (tmp_mode != cur_mode && cur_mode == ""){
+    if (tmp_mode == "AtHome"){
+      start_home_list <- append(start_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      cur_mode <- tmp_mode
+    }else if(tmp_mode == "Transport"){
+      start_tran_list <- append(start_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      cur_mode <- tmp_mode
+    }else if(tmp_mode == "AtRecreation"){
+      start_recr_list <- append(start_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      cur_mode <- tmp_mode
+    }else if(tmp_mode == "AtRestaurant"){
+      start_rest_list <- append(start_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      cur_mode <- tmp_mode
+    }else if(tmp_mode == "AtWork"){
+      start_work_list <- append(start_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      cur_mode <- tmp_mode
+    }
+  }else if (tmp_mode != cur_mode && cur_mode != ""){
+    if (cur_mode == "AtHome"){
+      end_home_list <- append(end_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      if (tmp_mode == "Transport"){
+        start_tran_list <- append(start_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRecreation"){
+        start_recr_list <- append(start_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRestaurant"){
+        start_rest_list <- append(start_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtWork"){
+        start_work_list <- append(start_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }
+      cur_mode <- tmp_mode
+    }else if(cur_mode == "Transport"){
+      end_tran_list <- append(end_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      if (tmp_mode == "AtHome"){
+        start_home_list <- append(start_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRecreation"){
+        start_recr_list <- append(start_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRestaurant"){
+        start_rest_list <- append(start_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtWork"){
+        start_work_list <- append(start_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }
+      cur_mode <- tmp_mode
+    }else if(cur_mode == "AtRecreation"){
+      end_recr_list <- append(end_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      if (tmp_mode == "Transport"){
+        start_tran_list <- append(start_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtHome"){
+        start_home_list <- append(start_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRestaurant"){
+        start_rest_list <- append(start_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtWork"){
+        start_work_list <- append(start_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }
+      cur_mode <- tmp_mode
+    }else if(cur_mode == "AtRestaurant"){
+      end_rest_list <- append(end_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      if (tmp_mode == "Transport"){
+        start_tran_list <- append(start_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRecreation"){
+        start_recr_list <- append(start_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtHome"){
+        start_home_list <- append(start_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtWork"){
+        start_work_list <- append(start_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }
+      cur_mode <- tmp_mode
+    }else if(cur_mode == "AtWork"){
+      end_work_list <- append(end_work_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      if (tmp_mode == "Transport"){
+        start_tran_list <- append(start_tran_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRecreation"){
+        start_recr_list <- append(start_recr_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtRestaurant"){
+        start_rest_list <- append(start_rest_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }else if (tmp_mode == "AtHome"){
+        start_home_list <- append(start_home_list, as.integer(difftime(tmp_time, strptime("2022-03-02T00:00:00Z", "%Y-%m-%dT%H:%M:%S"), units='mins')))
+      }
+      cur_mode <- tmp_mode
+    }
+  }
+  if (tmp_time == strptime("2022-03-02T23:55:00Z", "%Y-%m-%dT%H:%M:%S")){
+    if (tmp_mode == "Transport"){
+      end_tran_list <- append(end_tran_list, 1440)
+    }else if (tmp_mode == "AtRecreation"){
+      end_recr_list <- append(end_recr_list, 1440)
+    }else if (tmp_mode == "AtRestaurant"){
+      end_rest_list <- append(end_rest_list, 1440)
+    }else if (tmp_mode == "AtHome"){
+      end_home_list <- append(end_home_list, 1440)
+    }else if (tmp_mode == "AtWork"){
+      end_work_list <- append(end_work_list, 1440)
+    }
+  }
+}
+
+lens <- c(length(start_home_list), length(start_recr_list), length(start_rest_list), length(start_tran_list), length(start_work_list))
+while (TRUE){
+  if (length(start_home_list) < max(lens)){
+    start_home_list <- append(start_home_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(start_recr_list) < max(lens)){
+    start_recr_list <- append(start_recr_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(start_rest_list) < max(lens)){
+    start_rest_list <- append(start_rest_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(start_tran_list) < max(lens)){
+    start_tran_list <- append(start_tran_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(start_work_list) < max(lens)){
+    start_work_list <- append(start_work_list, 0, 1)
+  }else{
+    break
+  }
+}
+
+while (TRUE){
+  if (length(end_home_list) < max(lens)){
+    end_home_list <- append(end_home_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(end_recr_list) < max(lens)){
+    end_recr_list <- append(end_recr_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(end_rest_list) < max(lens)){
+    end_rest_list <- append(end_rest_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(end_tran_list) < max(lens)){
+    end_tran_list <- append(end_tran_list, 0, 1)
+  }else{
+    break
+  }
+}
+while (TRUE){
+  if (length(end_work_list) < max(lens)){
+    end_work_list <- append(end_work_list, 0, 1)
+  }else{
+    break
+  }
+}
+X2 <- data.frame(id = 2, start_home_list, end_home_list, start_recr_list, end_recr_list, start_rest_list, end_rest_list, start_tran_list, end_tran_list, start_work_list, end_work_list)
+```
+
+After data preprocessing, the mode data for participant 1 are shown as followed.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+head(X1)
+```
+
+After data preprocessing, the mode data for participant 2 are shown as followed.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+head(X2)
+```
+
+# 4 Plotting daily routines
+The following two charts show the start and end times of each condition in the routine of Participant 1 and Participant 2 for the whole day of March 2, respectively.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+visi1 <- visielse(X1, informer = NULL)
+```
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+visi2 <- visielse(X2, informer = NULL)
+```
+
+ViSiElse differentiate two type of actions, namely: punctual and long. 
+
+Since it is difficult to accurately grasp the daily routines of the participants by only observing the start moment and end moment of each state, all the punctual actions are integrated into long actions. This can help us to observe the duration of each state, and it is also convenient to compare the two participants' daily routines.
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+visi1 <- visielse(X1, informer = NULL, doplot = FALSE) # automatically creates a ViSibook
+book1 <- ConvertFromViSibook(visi1@book) # Exctract the ViSibook
+```
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+visi2 <- visielse(X2, informer = NULL, doplot = FALSE) # automatically creates a ViSibook
+book2 <- ConvertFromViSibook(visi2@book) # Exctract the ViSibook
+```
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+book1 <- book1[order(as.numeric(book1$showorder)), ]
+```
+
+```{r echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+book2 <- book2[order(as.numeric(book2$showorder)), ]
+```
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+book1[11,] <- c("At home", "At home", "l", 11, "start_home_list", "end_home_list")
+book1[12,] <- c("Enjoyment", "Enjoyment", "l", 12, "start_recr_list", "end_recr_list")
+book1[13,] <- c("At Restaurant", "At Restaurant", "l", 13, "start_rest_list", "end_rest_list")
+book1[14,] <- c("Transportation", "Transportation", "l", 14, "start_tran_list", "end_tran_list")
+book1[15,] <- c("At work", "At work", "l", 15, "start_work_list", "end_work_list")
+book1$showorder <- c(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 11, 12, 13, 14, 15)
+book1 <- book1[order(as.numeric(book1$showorder)), ]
+book1
+```
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+book2[11,] <- c("At home", "At home", "l", 11, "start_home_list", "end_home_list")
+book2[12,] <- c("Enjoyment", "Enjoyment", "l", 12, "start_recr_list", "end_recr_list")
+book2[13,] <- c("At Restaurant", "At Restaurant", "l", 13, "start_rest_list", "end_rest_list")
+book2[14,] <- c("Transportation", "Transportation", "l", 14, "start_tran_list", "end_tran_list")
+book2[15,] <- c("At work", "At work", "l", 15, "start_work_list", "end_work_list")
+book2$showorder <- c(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 11, 12, 13, 14, 15)
+book2 <- book2[order(as.numeric(book2$showorder)), ]
+book2
+```
+
+The following two charts show the modes distribution of participant 1 and participant 2's long actions throughout the whole day on March 2, respectively.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+visi1 <- visielse(X = X1,  book = book1, informer = NULL)
+```
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+visi2 <- visielse(X = X2,  book = book2, informer = NULL)
+```
+
+For a more intuitive comparison, I combined the journeys of participant 1 and participant 2 on March 2 into one graph.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+X <- rbind(X1, X2)
+group <- c( "group1", "group1", "group1", "group1", "group1", 
+            "group1", "group1", "group1", "group1", "group1", 
+            "group1", "group1", "group2", "group2", "group2", 
+            "group2")
+
+visi <- visielse(X, group=group, book=book1 ,informer = NULL, method = "cut")
+```
+
+# 5 Summary
+Through comparative observation, we can conclude that on March 2, participant 2's schedule was more compact than participant 1.

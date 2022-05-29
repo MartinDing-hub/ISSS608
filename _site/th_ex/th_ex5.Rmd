@@ -1,0 +1,177 @@
+---
+title: "Take-home Exercise 5"
+description: |
+  Visualising and Analysing Geographic and Movement Data
+      
+author:
+  - name: Ding Yanmu
+    url: https://dingyanmu.netlify.app/
+date: "May 29, 2022"
+output: 
+  distill::distill_article:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# 1 Introduction
+There are two missions in Take-home Exercise 5. The first mission is to reveal the social areas of the engaged city in Ohio state. The second one is to visualize and analyze the locations with traffic bottleneck of the same city.<br>
+
+In this exercise, I am going to use **sf** package and **tmap** package to display the social areas and traffic bottleneck of the engaged city.
+
+# 2 Data Discription
+The data files used for this exercise are shown as followed:
+
+1. ***ParticipantStatusLogs1.csv***: This table contains information about each participant's daily routine on March 1st to March 6th.
+2. ***Apartments.csv***: This table contains information about residential apartments in the city.
+3. ***Buildings.csv***: This table contains information about the buildings in the city that were involved in this study; this includes commercial, residential and school properties.
+4. ***Employers.csv***: This table contains information about the companies and businesses within the city limits that either employ study participants, or which have available job openings.
+5. ***Pubs.csv***: This table contains information about the pubs within the city limits.
+6. ***Restaurants.csv***: This table contains information about the restaurants within the city limits.
+7. ***Schools.csv***: This table contains information about the city’s five schools.
+8. ***transport.rds***: This data file is partial of *ParticipantStatusLogs1.csv*.
+
+# 3 Data Preparation
+## 3.1 Installing and launching R packages
+For this exercise, I used 3 libraries. They are **sf**, **tmap** and **tidyverse**. The R code in the following code chunk is used to install the required packages and load them into RStudio environment.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+packages <- c('sf', 'tmap', 'tidyverse')
+for(p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+```
+
+## 3.2 Importing the dataset
+Data import was completed by using read_sf() which is a function in **sf** package. This function is useful for reading delimited files into a tibble.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+apartments = read_sf("data/wkt/Apartments.csv", options="GEOM_POSSIBLE_NAMES=location")
+buildings = read_sf("data/wkt/Buildings.csv", options="GEOM_POSSIBLE_NAMES=location")
+employers = read_sf("data/wkt/Employers.csv", options="GEOM_POSSIBLE_NAMES=location")
+logs = read_sf("data/wkt/ParticipantStatusLogs1.csv", options="GEOM_POSSIBLE_NAMES=currentLocation")
+pubs = read_sf("data/wkt/Pubs.csv", options="GEOM_POSSIBLE_NAMES=location")
+restaurants = read_sf("data/wkt/Restaurants.csv", options="GEOM_POSSIBLE_NAMES=location")
+schools = read_sf("data/wkt/Schools.csv", options="GEOM_POSSIBLE_NAMES=location")
+```
+
+Here, we use read_rds() which is a function in **tidyverse** package to read data in *transport.rds* file. This data file was generated in the fourth class. Here, I just use it directly.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+transport <- read_rds("data/rds/transport.rds")
+```
+
+# 4 Plotting social areas
+The **buildings** table contains the point coordinates of all the areas, so tm_polygons() function is used here to plot the outlines of each area in the **buildings** table. On this basis outline, different colored points are used to represent different types of social areas.
+
+As shown in the figure below, the red dots represent working areas, the lightblue dots represent residential areas, the green dots represent public areas, the blue dots represent restaurants, and the yellow dots represent schools.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+tmap_mode("view")
+tm_shape(buildings)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1) +
+tm_shape(employers) +
+  tm_dots(col = "red") +
+tm_shape(apartments) +
+  tm_dots(col = "lightblue") +
+tm_shape(pubs) +
+  tm_dots(col = "green") +
+tm_shape(restaurants) +
+  tm_dots(col = "blue") +
+tm_shape(schools) +
+  tm_dots(col = "yellow")
+tmap_mode("view")
+```
+Due to the overlap between points, it is impossible to clearly show the boundaries between every two social areas. Therefore, I use the "buildingType" column in the buildings table to represent different social areas.
+
+Here, working area, public area and restaurants are classified as commercial area. The distribution map of each region is shown as followed.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+tmap_mode("view")
+tm_shape(buildings)+
+tm_polygons(col = "buildingType",
+           palette = "Set1",
+           border.col = "black",
+           border.alpha = .5,
+           border.lwd = 0.5)
+tmap_mode("view")
+```
+Besides showing the distribution of the regions, I also plot a figure to show where the participants socialized between March 1st and March 6th. The distribution results are shown in the figure below.
+
+Since I want to show social places, only the restaurants and entertainment places that the participants have been to are plotted in the following figure. Among them, entertainment venues are represented by red dots, and restaurants are represented by yellow dots.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+recreation <- logs[logs$currentMode == "AtRecreation",]
+restaurant <- logs[logs$currentMode == "AtRestaurant",]
+
+tmap_mode("view")
+tm_shape(buildings)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1) +
+tm_shape(recreation) +
+  tm_dots(col = "red") +
+tm_shape(restaurant) +
+  tm_dots(col = "yellow")
+tmap_mode("view")
+```
+# 5 Plotting traffic bottleneck
+First, I represent the size of the traffic flow in each area by drawing red dots on the basis of the map outline. Each red dot represents the position of the moment in the transport table where the participant is in the state "Transport".
+
+Since this is a point map, the area that looks like a red line is a traffic bottleneck.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+tmap_mode("plot")
+tm_shape(buildings)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1) +
+tm_shape(transport) +
+  tm_dots(col = "red") 
+```
+
+In order to visualize the traffic bottlenecks in the city, I intend to use a heatmap to show the traffic congestion on each road.
+
+Below is a legend of the heat degree.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+hex <- st_make_grid(buildings, 
+                    cellsize=100, 
+                    square=FALSE) %>%
+  st_sf() %>%
+  rowid_to_column('hex_id')
+plot(hex)
+```
+
+The figure below shows the traffic congestion in each area more clearly. The darker the color, the greater the traffic flow.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+points_in_hex <- st_join(transport, 
+                        hex, 
+                        join=st_within) %>%
+  st_set_geometry(NULL) %>%
+  count(name='pointCount', hex_id)
+
+hex_combined <- hex %>%
+  left_join(points_in_hex, 
+            by = 'hex_id') %>%
+  replace(is.na(.), 0)
+
+tm_shape(hex_combined %>%
+           filter(pointCount > 0))+
+  tm_fill("pointCount",
+          n = 10,
+          style = "quantile") +
+  tm_borders(alpha = 0.1)
+```

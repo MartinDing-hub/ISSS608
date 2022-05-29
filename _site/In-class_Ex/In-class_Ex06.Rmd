@@ -75,7 +75,7 @@ tm_shape(buildings) +
     border.col = "black",
     border.lwd = 1
   ) + 
-tm_shape(employers) + 
+tm_shape(logs_selected) + 
   tm_dots(col = "red")
 ```
 

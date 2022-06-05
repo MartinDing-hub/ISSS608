@@ -1,0 +1,207 @@
+---
+title: "Take-home Exercise 6"
+description: |
+  Visualising and Analysing Community Network
+      
+author:
+  - name: Ding Yanmu
+    url: https://dingyanmu.netlify.app/
+date: "Jun 4, 2022"
+output: 
+  distill::distill_article:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# 1 Introduction
+In Take-home Exercise 6, I need to refer to bullet point 2 of Challenge 1 of VAST Challenge 2022, and reveal the patterns of community interactions in the engagement city. Besides that, I will also observe the relationships among all of the participants.<br>
+
+In this exercise, I am going to use **visNetwork** package, **igraph** package and **ggraph** to display the complex relationships among the participants who live in the engaged city.
+
+# 2 Data Discription
+The data file used for this exercise are ***Participants.csv*** and ***SocialNetwork.csv***. <br>
+The first file contains information about the residents of Engagement, OH that have agreed to participate in the study. Following are the definitions of each column of data:
+
+  - **participantId** (integer): unique ID assigned to each participant
+  - **householdSize** (integer): the number of people in the participant’s household
+  - **haveKids** (boolean): whether there are children living in the participant’s household
+  - **age** (integer): participant’s age in years at the start of the study
+  - **educationLevel** (string factor): the participant’s education level, one of: {"Low", "HighSchoolOrCollege", "Bachelors", "Graduate"}
+  - **interestGroup** (char): a char representing the participant’s stated primary interest group, one of {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}. Note: specific topics of interest have been redacted to avoid bias.
+  - **joviality** (float): a value ranging from [0,1] indicating the participant’s overall happiness level at the start of the study.
+
+The second file contains information about participants’ evolving social relationships. Following are the definitions of each column of data:
+
+  - **timestamp** (datetime): the time when the check-in was logged
+  - **participantIdFrom** (int): unique ID corresponding to the participant initiating the interaction
+  - **participantIdTo** (int): unique ID corresponding to the participant who is the target of the interaction
+
+# 3 Data Preparation
+## 3.1 Installing and launching R packages
+For this exercise, I used 8 libraries. They are **igraph**, **tidygraph**, **ggraph**, **visNetwork**, **lubridate**, **clock**, **graphlayouts** and **tidyverse**. The R code in the following code chunk is used to install the required packages and load them into RStudio environment.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+packages <- c('igraph', 'tidygraph', 
+             'ggraph', 'visNetwork', 
+             'lubridate', 'clock',
+             'tidyverse', 'graphlayouts')
+for(p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+```
+
+## 3.2 Importing the dataset
+Data import was completed by using read_csv() and read_rds() which are functions in **readr** package. This function is useful for reading delimited files into a tibble.
+
+```{r echo = FALSE, eval = FALSE, warning = FALSE, message = FALSE}
+GAStech_edges <- read_csv("data/SocialNetwork.csv")
+GAStech_edges <- GAStech_edges %>%
+  filter(year(timestamp) == 2022) %>%
+  filter(month(timestamp) <= 8)
+write_rds(GAStech_edges, "data/rds/SocialNetwork.rds")
+```
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+GAStech_nodes <- read_csv("data/Participants.csv")
+GAStech_edges <- read_rds("data/rds/SocialNetwork.rds")
+```
+
+## 3.3 Data preprocessing
+The "nodes" parameter of the tbl_graph() function must be a continuous integer sequence starting from 1. If the input parameter is 0, it will return some error. However, in the source dataset, the participantId starts from 0, so, here, I add one to all of the participants' ID in the study.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+GAStech_nodes <- GAStech_nodes %>%
+  mutate(participantId = participantId + 1)
+GAStech_nodes
+```
+
+For the edges dataset, I also do the add-one operation to both *participantIdFrom* column and *participantIdTo* column. Moreover, if I put all the social network in the tbl_graph() function, it will take a long time to process all the data, so I just use all the social activities happened in 2022 March.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+GAStech_edges <- GAStech_edges %>%
+  mutate(participantIdFrom = participantIdFrom + 1) %>%
+  mutate(participantIdTo = participantIdTo + 1) %>%
+  filter(year(timestamp) == 2022) %>%
+  filter(month(timestamp) == 3)
+GAStech_edges
+```
+
+# 4 Plotting social network
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+GAStech_edges_aggregated_1 <- GAStech_edges %>%
+  group_by(participantIdFrom, participantIdTo) %>%
+    summarise(Weight = n()) %>%
+  filter(participantIdFrom!=participantIdTo) %>%
+  filter(Weight >= 1) %>%
+  ungroup()
+
+GAStech_graph <- tbl_graph(nodes = GAStech_nodes, 
+                           edges = GAStech_edges_aggregated_1)
+```
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+set.seed(1234)
+ggraph(GAStech_graph, 
+       layout = "stress") + 
+  geom_edge_link() + 
+  geom_node_point() + 
+  theme_graph()
+```
+
+Although the data preprocessing has taken into account the large amount of social network data, there were more than 900 participants had social activities in March. The final social network is so dense that it is difficult to clearly observe the connection between points. Therefore, I performed a second data filter. Only display the social network with more than 25 social interactions in March.
+
+In addition, the unconnected dots in the above graph indicate that the participants did not have any form of social interaction with other participants in March. The tbl_graph function requires that the input "nodeId" must be continuous, so I cannot remove these participants without social activities from the node list, otherwise tbl_graph will report an error.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+GAStech_edges_aggregated_2 <- GAStech_edges %>%
+  group_by(participantIdFrom, participantIdTo) %>%
+    summarise(Weight = n()) %>%
+  filter(participantIdFrom!=participantIdTo) %>%
+  filter(Weight >= 25) %>%
+  ungroup()
+
+GAStech_graph <- tbl_graph(nodes = GAStech_nodes, 
+                           edges = GAStech_edges_aggregated_2)
+```
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+set.seed(1234)
+ggraph(GAStech_graph, 
+       layout = "stress") + 
+  geom_edge_link() + 
+  geom_node_point() + 
+  theme_graph()
+```
+From the social network, it can be seen that most of the participants had quite frequent interactions and communication at the beginning of the study. However, the difference between this network diagram and the previous one is that the unconnected points in this diagram do not mean that the participants do no have interaction with other participants. It just means that the number of their interactions with other participants are less than 25 times.
+
+In order to make the social network diagram much clearer, I use "nicely" layout to display the same social network again. It is shown as followed.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+set.seed(1234)
+ggraph(GAStech_graph, 
+       layout = "nicely") + 
+  geom_edge_link(aes()) + 
+  geom_node_point(aes()) + 
+  theme_graph()
+```
+
+The funciont of the code in the below chunk is to filter out the participants who had interacted with at least 10 other participants in March. More than half of the participants had social activities with at least 10 participants in March, so the social network diagram is too dense for me to observe the details in it.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+FromId <- GAStech_edges_aggregated_1 %>%
+  count(participantIdFrom) %>%
+  filter(n >= 10)
+
+GAStech_edges_aggregated_3 <- subset(GAStech_edges_aggregated_1, participantIdFrom %in% FromId$participantIdFrom)
+
+GAStech_graph_1 <- tbl_graph(nodes = GAStech_nodes, 
+                             edges = GAStech_edges_aggregated_3, 
+                             directed = TRUE)
+```
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+set.seed(1234)
+ggraph(GAStech_graph_1, 
+       layout = "nicely") + 
+  geom_edge_link() + 
+  geom_node_point() + 
+  theme_graph()
+```
+
+By adding a new filter, I filtered out participants who socialized with at least 10 participants each in March and had at least 20 interactions with the participants. By drawing the social network diagram, we can still find 6 clusters. This means that the participants in this six clusters had very close communication and interactions in the early stage of the study. Maybe their relationships are close friends, colleagues at work or neighbors.
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+GAStech_edges_aggregated_4 <- GAStech_edges %>%
+  group_by(participantIdFrom, participantIdTo) %>%
+    summarise(Weight = n()) %>%
+  filter(participantIdFrom!=participantIdTo) %>%
+  filter(Weight >= 20) %>%
+  ungroup()
+
+FromId <- GAStech_edges_aggregated_4 %>%
+  count(participantIdFrom) %>%
+  filter(n >= 10)
+
+GAStech_edges_aggregated_4 <- subset(GAStech_edges_aggregated_4, participantIdFrom %in% FromId$participantIdFrom)
+
+GAStech_graph_2 <- tbl_graph(nodes = GAStech_nodes, 
+                             edges = GAStech_edges_aggregated_4, 
+                             directed = TRUE)
+```
+
+```{r echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE}
+set.seed(1234)
+ggraph(GAStech_graph_2, 
+       layout = "stress") + 
+  geom_edge_link() + 
+  geom_node_point() + 
+  theme_graph()
+```
